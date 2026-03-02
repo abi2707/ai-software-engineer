@@ -293,7 +293,6 @@ async function sendMessage() {
         addBubble("Your project is ready! 🎉", "bot");
 
 if (data.preview_html) {
-
     const previewContainer = document.createElement("div");
     previewContainer.style.marginTop = "20px";
     previewContainer.style.borderRadius = "20px";
@@ -311,6 +310,21 @@ if (data.preview_html) {
 
     iframe.srcdoc = data.preview_html;
 }
+
+const askDownload = document.createElement("div");
+askDownload.className = "download-card";
+askDownload.innerHTML = `
+    <span>Do you want to download the full project?</span>
+`;
+
+const btn = document.createElement("button");
+btn.textContent = "Download ZIP 📦";
+btn.onclick = () => window.location.href = data.download_url;
+
+askDownload.appendChild(btn);
+chat.appendChild(askDownload);
+
+chat.scrollTop = chat.scrollHeight;
 
         const card = document.createElement("div");
         card.className = "download-card";
