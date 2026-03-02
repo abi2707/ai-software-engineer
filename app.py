@@ -38,28 +38,31 @@ async def homepage(request: Request):
 # -----------------------------
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    try:
+        result = agent.invoke(
+            {"user_prompt": request.user_prompt},
+            {"recursion_limit": 100}
+        )
 
-    # Run your LangGraph agent
-    result = agent.invoke(
-        {"user_prompt": request.user_prompt},
-        {"recursion_limit": 100}
-    )
+        project_folder = "generated_project"
+        zip_file_path = "generated_project.zip"
 
-    # Zip the generated project folder
-    project_folder = "generated_project"
-    zip_file_path = "generated_project.zip"
+        if not os.path.exists(project_folder):
+            return {"message": "Project folder not created ❌"}
 
-    # Remove old zip if exists
-    if os.path.exists(zip_file_path):
-        os.remove(zip_file_path)
+        if os.path.exists(zip_file_path):
+            os.remove(zip_file_path)
 
-    # Make new zip
-    shutil.make_archive("generated_project", "zip", project_folder)
+        shutil.make_archive("generated_project", "zip", project_folder)
 
-    return {
-        "message": "Project generated successfully ✅",
-        "download_url": "/download"
-    }
+        return {
+            "message": "Project generated successfully ✅",
+            "download_url": "/download"
+        }
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {"message": f"Backend error: {str(e)}"}
 
 
 # -----------------------------
