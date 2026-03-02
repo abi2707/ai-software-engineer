@@ -44,26 +44,22 @@ async def chat(request: ChatRequest):
             {"recursion_limit": 100}
         )
 
-        project_folder = "generated_project"
-        zip_file_path = "generated_project.zip"
+        # Assume your agent creates index.html inside generated_project
+        file_path = "generated_project/index.html"
 
-        if not os.path.exists(project_folder):
-            return {"message": "Project folder not created ❌"}
+        if not os.path.exists(file_path):
+            return {"message": "No preview file generated ❌"}
 
-        if os.path.exists(zip_file_path):
-            os.remove(zip_file_path)
-
-        shutil.make_archive("generated_project", "zip", project_folder)
+        with open(file_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
 
         return {
             "message": "Project generated successfully ✅",
-            "download_url": "/download"
+            "preview_html": html_content
         }
 
     except Exception as e:
-        print("ERROR:", str(e))
         return {"message": f"Backend error: {str(e)}"}
-
 
 # -----------------------------
 # Download Endpoint

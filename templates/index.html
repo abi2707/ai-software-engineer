@@ -292,6 +292,26 @@ async function sendMessage() {
 
         addBubble("Your project is ready! 🎉", "bot");
 
+if (data.preview_html) {
+
+    const previewContainer = document.createElement("div");
+    previewContainer.style.marginTop = "20px";
+    previewContainer.style.borderRadius = "20px";
+    previewContainer.style.overflow = "hidden";
+    previewContainer.style.border = "2px solid rgba(255,255,255,0.2)";
+    previewContainer.style.height = "400px";
+
+    const iframe = document.createElement("iframe");
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+
+    previewContainer.appendChild(iframe);
+    chat.appendChild(previewContainer);
+
+    iframe.srcdoc = data.preview_html;
+}
+
         const card = document.createElement("div");
         card.className = "download-card";
         card.innerHTML = `
