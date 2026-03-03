@@ -13,10 +13,12 @@ app = FastAPI(title="AI Software Engineer", version="1.0")
 class ChatRequest(BaseModel):
     user_prompt: str
 
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     with open(os.path.join(BASE_DIR, "templates", "index.html"), "r") as f:
         return f.read()
+
 
 @app.get("/debug")
 def debug():
@@ -27,6 +29,7 @@ def debug():
         "project_folder_exists": os.path.exists(project_folder),
         "files": os.listdir(project_folder) if os.path.exists(project_folder) else []
     }
+
 
 def inline_assets(html: str, project_folder: str) -> str:
     def replace_css(match):
@@ -48,6 +51,7 @@ def inline_assets(html: str, project_folder: str) -> str:
     html = re.sub(r'<script[^>]+src=["\']([^"\']+\.js)["\'][^>]*>\s*</script>',
                   replace_js, html, flags=re.IGNORECASE)
     return html
+
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
@@ -74,6 +78,7 @@ async def chat(request: ChatRequest):
         "preview_html": preview_html,
         "download_url": "/download"
     }
+
 
 @app.get("/download")
 def download_project():
