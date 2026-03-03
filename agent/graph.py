@@ -56,7 +56,7 @@ def coder_agent(state: dict) -> dict:
 
     current_task = steps[coder_state.current_step_idx]
 
-    # Direct LLM call — NO tools
+    # Generate file content
     response = llm.invoke(
         f"""
 You are writing the full content of a file.
@@ -74,13 +74,15 @@ Do not return JSON.
 
     content = response.content
 
-    # Direct write
-    write_file.run(current_task.filepath, content)
+    # 🔥 CORRECT TOOL CALL FORMAT
+    write_file.run({
+        "path": current_task.filepath,
+        "content": content
+    })
 
     coder_state.current_step_idx += 1
 
     return {"coder_state": coder_state}
-
 graph = StateGraph(dict)
 
 graph.add_node("planner", planner_agent)
