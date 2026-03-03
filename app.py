@@ -40,18 +40,24 @@ async def chat(request: ChatRequest):
             "download_url": None
         }
 
+    # 🔥 ADD THIS BLOCK RIGHT HERE
     project_folder = os.path.join(BASE_DIR, "generated_project")
-    print("Project folder path:", project_folder)
-    if os.path.exists(project_folder):
-        print("Files inside generated_project:", os.listdir(project_folder))
-    else:
-        print("generated_project folder does NOT exist")
 
+    if not os.path.exists(project_folder) or not os.listdir(project_folder):
+        return {
+            "message": "Coder did not generate files.",
+            "preview_html": None,
+            "download_url": None
+        }
+
+    # ⬇️ Existing zip logic continues below
     zip_base = os.path.join(BASE_DIR, "generated_project")
     zip_file_path = zip_base + ".zip"
-    
+
     if os.path.exists(zip_file_path):
         os.remove(zip_file_path)
+
+    shutil.make_archive(zip_base, "zip", project_folder)
 
     shutil.make_archive(zip_base, "zip", project_folder)
 
