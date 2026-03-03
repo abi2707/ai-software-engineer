@@ -6,19 +6,27 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from agent.graph import agent
 
-# Always resolve paths relative to this file, not the working directory
+# Resolve base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Ensure generated_project folder exists BEFORE mounting
+generated_dir = os.path.join(BASE_DIR, "generated_project")
+os.makedirs(generated_dir, exist_ok=True)
 
 app = FastAPI(
     title="AI Software Engineer",
     description="AI chatbot that converts prompts into working software projects.",
     version="1.0"
 )
+
+# Serve generated projects for preview
 app.mount(
     "/preview",
-    StaticFiles(directory=os.path.join(BASE_DIR, "generated_project")),
+    StaticFiles(directory=generated_dir),
     name="preview"
 )
+
+
 class ChatRequest(BaseModel):
     user_prompt: str
 
@@ -26,13 +34,15 @@ class ChatRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def home():
     html_path = os.path.join(BASE_DIR, "templates", "index.html")
-    with open(html_path, "r") as f:
+    with open(html_path, "r", encoding="utf-8") as f:
         return f.read()
+
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
-        result = agent.invoke(
+        # Run LangGraph agent
+        agent.invoke(
             {"user_prompt": request.user_prompt},
             {"recursion_limit": 100}
         )
@@ -43,34 +53,37 @@ async def chat(request: ChatRequest):
             "download_url": None
         }
 
-    project_folder = os.path.join(BASE_DIR, "generated_project")
-
-    if not os.path.exists(project_folder) or not os.listdir(project_folder):
+    # Validate files were created
+    if not os.listdir(generated_dir):
         return {
             "message": "Coder did not generate files.",
             "preview_url": None,
             "download_url": None
         }
 
+    # Create ZIP
     zip_base = os.path.join(BASE_DIR, "generated_project")
     zip_file_path = zip_base + ".zip"
 
     if os.path.exists(zip_file_path):
         os.remove(zip_file_path)
 
-    shutil.make_archive(zip_base, "zip", project_folder)
+    shutil.make_archive(zip_base, "zip", generated_dir)
 
     return {
         "message": "Project generated successfully ✅",
         "preview_url": "/preview/index.html",
         "download_url": "/download"
     }
-   
 
 
 @app.get("/download")
 def download_project():
     zip_path = os.path.join(BASE_DIR, "generated_project.zip")
+
+    if not os.path.exists(zip_path):
+        return {"message": "Zip file not found."}
+
     return FileResponse(
         zip_path,
         media_type="application/zip",
