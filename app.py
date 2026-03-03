@@ -14,7 +14,11 @@ app = FastAPI(
     description="AI chatbot that converts prompts into working software projects.",
     version="1.0"
 )
-
+app.mount(
+    "/preview",
+    StaticFiles(directory=os.path.join(BASE_DIR, "generated_project")),
+    name="preview"
+)
 class ChatRequest(BaseModel):
     user_prompt: str
 
@@ -24,7 +28,6 @@ def home():
     html_path = os.path.join(BASE_DIR, "templates", "index.html")
     with open(html_path, "r") as f:
         return f.read()
-
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
@@ -36,21 +39,19 @@ async def chat(request: ChatRequest):
     except Exception as e:
         return {
             "message": f"Agent error: {str(e)}",
-            "preview_html": None,
+            "preview_url": None,
             "download_url": None
         }
 
-    # 🔥 ADD THIS BLOCK RIGHT HERE
     project_folder = os.path.join(BASE_DIR, "generated_project")
 
     if not os.path.exists(project_folder) or not os.listdir(project_folder):
         return {
             "message": "Coder did not generate files.",
-            "preview_html": None,
+            "preview_url": None,
             "download_url": None
         }
 
-    # ⬇️ Existing zip logic continues below
     zip_base = os.path.join(BASE_DIR, "generated_project")
     zip_file_path = zip_base + ".zip"
 
@@ -59,21 +60,12 @@ async def chat(request: ChatRequest):
 
     shutil.make_archive(zip_base, "zip", project_folder)
 
-    shutil.make_archive(zip_base, "zip", project_folder)
-
-    # Read generated project's index.html for preview
-    preview_html = None
-    preview_path = os.path.join(project_folder, "index.html")
-    if os.path.exists(preview_path):
-        with open(preview_path, "r") as f:
-            preview_html = f.read()
-
     return {
         "message": "Project generated successfully ✅",
-        "preview_html": preview_html,
+        "preview_url": "/preview/index.html",
         "download_url": "/download"
     }
-    
+   
 
 
 @app.get("/download")
