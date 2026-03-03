@@ -309,7 +309,7 @@
             if (data.preview_html) {
                 previewEmpty.style.display = 'none';
                 previewWrap.classList.add('active');
-                previewFrame.srcdoc = data.preview_html;
+                previewFrame.src = data.preview_html;
             } else {
                 addMsg('Note: no preview available (no index.html found in output).', 'bot');
             }
