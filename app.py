@@ -1,7 +1,8 @@
 import os
 import shutil
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from agent.graph import agent
 
@@ -15,9 +16,10 @@ class ChatRequest(BaseModel):
     user_prompt: str
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def home():
-    return {"status": "AI Software Engineer Running 🚀"}
+    with open("index.html", "r") as f:
+        return f.read()
 
 
 @app.post("/chat")
@@ -35,8 +37,16 @@ async def chat(request: ChatRequest):
 
     shutil.make_archive("generated_project", "zip", project_folder)
 
+    # Build a preview from the generated project's index.html (if it exists)
+    preview_html = None
+    preview_path = os.path.join(project_folder, "index.html")
+    if os.path.exists(preview_path):
+        with open(preview_path, "r") as f:
+            preview_html = f.read()
+
     return {
         "message": "Project generated successfully ✅",
+        "preview_html": preview_html,
         "download_url": "/download"
     }
 
