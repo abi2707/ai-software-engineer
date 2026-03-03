@@ -6,6 +6,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from agent.graph import agent
 
+# Always resolve paths relative to this file, not the working directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = FastAPI(
     title="AI Software Engineer",
     description="AI chatbot that converts prompts into working software projects.",
@@ -18,26 +21,35 @@ class ChatRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    with open("index.html", "r") as f:
+    html_path = os.path.join(BASE_DIR, "templates", "index.html")
+    with open(html_path, "r") as f:
         return f.read()
 
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    result = agent.invoke(
-        {"user_prompt": request.user_prompt},
-        {"recursion_limit": 100}
-    )
+    try:
+        result = agent.invoke(
+            {"user_prompt": request.user_prompt},
+            {"recursion_limit": 100}
+        )
+    except Exception as e:
+        return {
+            "message": f"Agent error: {str(e)}",
+            "preview_html": None,
+            "download_url": None
+        }
 
-    project_folder = "generated_project"
-    zip_file_path = "generated_project.zip"
+    project_folder = os.path.join(BASE_DIR, "generated_project")
+    zip_base = os.path.join(BASE_DIR, "generated_project")
+    zip_file_path = zip_base + ".zip"
 
     if os.path.exists(zip_file_path):
         os.remove(zip_file_path)
 
-    shutil.make_archive("generated_project", "zip", project_folder)
+    shutil.make_archive(zip_base, "zip", project_folder)
 
-    # Build a preview from the generated project's index.html (if it exists)
+    # Read generated project's index.html for preview
     preview_html = None
     preview_path = os.path.join(project_folder, "index.html")
     if os.path.exists(preview_path):
@@ -53,8 +65,9 @@ async def chat(request: ChatRequest):
 
 @app.get("/download")
 def download_project():
+    zip_path = os.path.join(BASE_DIR, "generated_project.zip")
     return FileResponse(
-        "generated_project.zip",
+        zip_path,
         media_type="application/zip",
         filename="generated_project.zip"
     )
