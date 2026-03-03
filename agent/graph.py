@@ -12,8 +12,7 @@ _ = load_dotenv()
 
 
 
-llm = ChatGroq(model="openai/gpt-oss-120b", max_tokens=4096)
-
+llm = ChatGroq(model="llama-3.3-70b-versatile", max_tokens=4096)
 
 def planner_agent(state: dict) -> dict:
     """Converts user prompt into a structured Plan."""
