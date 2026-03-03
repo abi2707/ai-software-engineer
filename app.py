@@ -41,9 +41,15 @@ async def chat(request: ChatRequest):
         }
 
     project_folder = os.path.join(BASE_DIR, "generated_project")
+    print("Project folder path:", project_folder)
+    if os.path.exists(project_folder):
+        print("Files inside generated_project:", os.listdir(project_folder))
+    else:
+        print("generated_project folder does NOT exist")
+
     zip_base = os.path.join(BASE_DIR, "generated_project")
     zip_file_path = zip_base + ".zip"
-
+    
     if os.path.exists(zip_file_path):
         os.remove(zip_file_path)
 
@@ -61,6 +67,7 @@ async def chat(request: ChatRequest):
         "preview_html": preview_html,
         "download_url": "/download"
     }
+    
 
 
 @app.get("/download")
