@@ -1,21 +1,17 @@
 import pathlib
 import subprocess
 from typing import Tuple
-
 from langchain_core.tools import tool
 
-PROJECT_ROOT = pathlib.Path.cwd() / "generated_project"
-
+# KEY FIX: anchor to this file's location, not cwd()
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent / "generated_project"
 
 def safe_path_for_project(path: str) -> pathlib.Path:
     base = PROJECT_ROOT.resolve()
     target = (base / path).resolve()
-
     if not str(target).startswith(str(base)):
         raise ValueError("Attempt to write outside project root")
-
     return target
-
 
 @tool
 def write_file(path: str, content: str) -> str:
@@ -26,7 +22,6 @@ def write_file(path: str, content: str) -> str:
         f.write(content)
     return f"WROTE:{p}"
 
-
 @tool
 def read_file(path: str) -> str:
     """Reads content from a file at the specified path within the project root."""
@@ -36,12 +31,10 @@ def read_file(path: str) -> str:
     with open(p, "r", encoding="utf-8") as f:
         return f.read()
 
-
 @tool
 def get_current_directory() -> str:
     """Returns the current working directory."""
     return str(PROJECT_ROOT)
-
 
 @tool
 def list_files(directory: str = ".") -> str:
@@ -54,11 +47,11 @@ def list_files(directory: str = ".") -> str:
 
 @tool
 def run_cmd(cmd: str, cwd: str = None, timeout: int = 30) -> Tuple[int, str, str]:
-    """Runs a shell command in the specified directory and returns the result."""
+    """Runs a shell command and returns the result."""
     cwd_dir = safe_path_for_project(cwd) if cwd else PROJECT_ROOT
-    res = subprocess.run(cmd, shell=True, cwd=str(cwd_dir), capture_output=True, text=True, timeout=timeout)
+    res = subprocess.run(cmd, shell=True, cwd=str(cwd_dir),
+                         capture_output=True, text=True, timeout=timeout)
     return res.returncode, res.stdout, res.stderr
-
 
 def init_project_root():
     PROJECT_ROOT.mkdir(parents=True, exist_ok=True)
