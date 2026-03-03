@@ -4,7 +4,7 @@
     <title>Buildy AI 🐣</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -22,49 +22,35 @@
             font-family: 'Geist Mono', monospace;
             background: var(--ink);
             color: var(--paper);
-            min-height: 100vh;
+            height: 100vh;
             display: grid;
             grid-template-rows: auto 1fr;
         }
 
         header {
-            padding: 32px 48px;
+            padding: 28px 40px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             border-bottom: 1px solid var(--border);
         }
 
-        .logo-mark {
-            font-size: 28px;
-            animation: breathe 4s ease-in-out infinite;
-        }
-
-        @keyframes breathe {
-            0%,100% { transform: scale(1); }
-            50% { transform: scale(1.12); }
-        }
-
-        .logo-text {
+        .logo {
             font-family: 'Instrument Serif', serif;
-            font-size: 1.5rem;
-        }
-
-        .logo-text em {
-            color: var(--yolk);
+            font-size: 1.4rem;
         }
 
         main {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            height: calc(100vh - 90px);
+            height: 100%;
         }
 
-        .panel-chat {
+        .left {
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 28px;
+            padding: 24px;
         }
 
         .chat {
@@ -72,7 +58,7 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
         .msg {
@@ -82,29 +68,19 @@
 
         .msg.user { flex-direction: row-reverse; }
 
-        .msg-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--mist);
-        }
-
-        .msg-text {
+        .bubble {
             padding: 10px 14px;
             border-radius: 12px;
             font-size: 0.82rem;
-            line-height: 1.6;
+            max-width: 80%;
         }
 
-        .msg.bot .msg-text {
+        .bot .bubble {
             background: var(--mist);
             border: 1px solid var(--border);
         }
 
-        .msg.user .msg-text {
+        .user .bubble {
             background: var(--yolk);
             color: black;
         }
@@ -119,25 +95,25 @@
             flex: 1;
             background: var(--mist);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 10px;
             color: white;
             resize: none;
             font-family: inherit;
         }
 
-        .send-btn {
+        button {
             background: var(--yolk);
             border: none;
-            border-radius: 10px;
-            width: 40px;
+            padding: 10px 16px;
+            border-radius: 8px;
             cursor: pointer;
         }
 
-        .panel-preview {
+        .right {
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            padding: 28px;
         }
 
         .preview-empty {
@@ -146,25 +122,19 @@
             align-items: center;
             justify-content: center;
             opacity: 0.3;
-            text-align: center;
         }
 
-        .preview-frame-wrap {
+        .preview-frame {
             flex: 1;
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border);
-            background: white;
             display: none;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            opacity: 0;
-            transform: translateY(10px);
+            background: white;
         }
 
-        .preview-frame-wrap.active {
+        .preview-frame.active {
             display: block;
-            opacity: 1;
-            transform: translateY(0);
         }
 
         iframe {
@@ -173,28 +143,17 @@
             border: none;
         }
 
-        .download-row {
+        .download {
             display: none;
             margin-top: 12px;
         }
 
-        .download-row.active {
+        .download.active {
             display: block;
         }
 
-        .dl-btn {
-            background: var(--sage);
-            border: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            color: white;
-        }
-
-        @media (max-width: 700px) {
-            main {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 800px) {
+            main { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -202,20 +161,15 @@
 <body>
 
 <header>
-    <div class="logo-mark">🐣</div>
-    <div class="logo-text">build<em>y</em></div>
+    <div class="logo">🐣 buildy</div>
 </header>
 
 <main>
 
-    <!-- LEFT -->
-    <div class="panel-chat">
+    <div class="left">
         <div class="chat" id="chat">
             <div class="msg bot">
-                <div class="msg-avatar">🐣</div>
-                <div class="msg-text">
-                    Describe what you want to build and I’ll generate it ✨
-                </div>
+                <div class="bubble">Describe what you want to build ✨</div>
             </div>
         </div>
 
@@ -223,99 +177,96 @@
             <textarea id="prompt" rows="1"
                 placeholder="Build a modern todo app..."
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
-            <button class="send-btn" onclick="sendMessage()">↑</button>
+            <button onclick="sendMessage()">Send</button>
         </div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="panel-preview">
+    <div class="right">
         <div class="preview-empty" id="previewEmpty">
-            <div>
-                <div style="font-size:50px;">🥚</div>
-                <p>Your project will hatch here.</p>
-            </div>
+            <div>🥚 Your project will appear here</div>
         </div>
 
-        <div class="preview-frame-wrap" id="previewWrap">
+        <div class="preview-frame" id="previewFrameWrap">
             <iframe id="previewFrame"></iframe>
         </div>
 
-        <div class="download-row" id="downloadRow">
-            <button class="dl-btn" id="dlBtn">Download ZIP 📦</button>
+        <div class="download" id="downloadWrap">
+            <button id="downloadBtn">Download ZIP 📦</button>
         </div>
     </div>
 
 </main>
 
 <script>
-const chat = document.getElementById('chat');
-const previewEmpty = document.getElementById('previewEmpty');
-const previewWrap = document.getElementById('previewWrap');
-const previewFrame = document.getElementById('previewFrame');
-const downloadRow = document.getElementById('downloadRow');
-const dlBtn = document.getElementById('dlBtn');
+const chat = document.getElementById("chat");
+const previewEmpty = document.getElementById("previewEmpty");
+const previewFrameWrap = document.getElementById("previewFrameWrap");
+const previewFrame = document.getElementById("previewFrame");
+const downloadWrap = document.getElementById("downloadWrap");
+const downloadBtn = document.getElementById("downloadBtn");
 
-function addMsg(text, type) {
-    const msg = document.createElement('div');
-    msg.className = 'msg ' + type;
+function addMessage(text, type) {
+    const msg = document.createElement("div");
+    msg.className = "msg " + type;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'msg-avatar';
-    avatar.textContent = type === 'bot' ? '🐣' : '👤';
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
 
-    const textEl = document.createElement('div');
-    textEl.className = 'msg-text';
-    textEl.textContent = text;
-
-    msg.appendChild(avatar);
-    msg.appendChild(textEl);
+    msg.appendChild(bubble);
     chat.appendChild(msg);
     chat.scrollTop = chat.scrollHeight;
 }
 
 function resetPreview() {
-    previewFrame.src = '';
-    previewWrap.classList.remove('active');
-    downloadRow.classList.remove('active');
-    previewEmpty.style.display = 'flex';
+    previewFrame.src = "";
+    previewFrameWrap.classList.remove("active");
+    downloadWrap.classList.remove("active");
+    previewEmpty.style.display = "flex";
 }
 
 async function sendMessage() {
-    const input = document.getElementById('prompt');
+    const input = document.getElementById("prompt");
     const text = input.value.trim();
     if (!text) return;
 
-    addMsg(text, 'user');
-    input.value = '';
+    addMessage(text, "user");
+    input.value = "";
+
     resetPreview();
+    addMessage("Generating project...", "bot");
 
     try {
-        const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_prompt: text })
         });
 
         const data = await res.json();
 
         if (!res.ok || !data.preview_url) {
-            addMsg(data.message || "Something went wrong.", 'bot');
+            addMessage(data.message || "Generation failed.", "bot");
             return;
         }
 
-        addMsg("Project ready! 🚀", 'bot');
+        addMessage("Project ready! 🚀", "bot");
 
-        previewEmpty.style.display = 'none';
-        previewWrap.classList.add('active');
+        previewEmpty.style.display = "none";
+        previewFrameWrap.classList.add("active");
+
+        // Cache bust
         previewFrame.src = data.preview_url + "?t=" + new Date().getTime();
 
         if (data.download_url) {
-            downloadRow.classList.add('active');
-            dlBtn.onclick = () => window.open(data.download_url, "_blank");
+            downloadWrap.classList.add("active");
+            downloadBtn.onclick = () => {
+                window.open(data.download_url, "_blank");
+            };
         }
 
     } catch (err) {
-        addMsg("Server error. Try again.", 'bot');
+        addMessage("Server error. Try again.", "bot");
     }
 }
 </script>

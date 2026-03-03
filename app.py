@@ -6,10 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from agent.graph import agent
 
-# Resolve base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Ensure generated_project folder exists BEFORE mounting
 generated_dir = os.path.join(BASE_DIR, "generated_project")
 os.makedirs(generated_dir, exist_ok=True)
 
@@ -19,7 +17,7 @@ app = FastAPI(
     version="1.0"
 )
 
-# Serve generated projects for preview
+# Serve generated project as static preview
 app.mount(
     "/preview",
     StaticFiles(directory=generated_dir),
@@ -40,8 +38,17 @@ def home():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+
+    # 🔥 1. Clear previous build completely
+    for filename in os.listdir(generated_dir):
+        file_path = os.path.join(generated_dir, filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        else:
+            shutil.rmtree(file_path)
+
+    # 🔥 2. Run agent
     try:
-        # Run LangGraph agent
         agent.invoke(
             {"user_prompt": request.user_prompt},
             {"recursion_limit": 100}
@@ -53,20 +60,22 @@ async def chat(request: ChatRequest):
             "download_url": None
         }
 
-    # Validate files were created
-    if not os.listdir(generated_dir):
+    # 🔥 3. Validate index.html exists
+    index_path = os.path.join(generated_dir, "index.html")
+
+    if not os.path.exists(index_path):
         return {
-            "message": "Coder did not generate files.",
+            "message": "Generation failed: index.html not created.",
             "preview_url": None,
             "download_url": None
         }
 
-    # Create ZIP
+    # 🔥 4. Create zip
     zip_base = os.path.join(BASE_DIR, "generated_project")
-    zip_file_path = zip_base + ".zip"
+    zip_path = zip_base + ".zip"
 
-    if os.path.exists(zip_file_path):
-        os.remove(zip_file_path)
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
 
     shutil.make_archive(zip_base, "zip", generated_dir)
 
