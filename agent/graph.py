@@ -41,35 +41,45 @@ def architect_agent(state: dict) -> dict:
 
 
 def coder_agent(state: dict) -> dict:
-    """LangGraph tool-using coder agent."""
     coder_state: CoderState = state.get("coder_state")
+
     if coder_state is None:
-        coder_state = CoderState(task_plan=state["task_plan"], current_step_idx=0)
+        coder_state = CoderState(
+            task_plan=state["task_plan"],
+            current_step_idx=0
+        )
 
     steps = coder_state.task_plan.implementation_steps
+
     if coder_state.current_step_idx >= len(steps):
         return {"coder_state": coder_state, "status": "DONE"}
 
     current_task = steps[coder_state.current_step_idx]
-    existing_content = read_file.run(current_task.filepath)
 
-    system_prompt = coder_system_prompt()
-    user_prompt = (
-        f"Task: {current_task.task_description}\n"
-        f"File: {current_task.filepath}\n"
-        f"Existing content:\n{existing_content}\n"
-        "Use write_file(path, content) to save your changes."
+    # Direct LLM call — NO tools
+    response = llm.invoke(
+        f"""
+You are writing the full content of a file.
+
+File path: {current_task.filepath}
+
+Task:
+{current_task.task_description}
+
+Output ONLY the full file content.
+Do not explain anything.
+Do not return JSON.
+"""
     )
 
-    coder_tools = [read_file, write_file, list_files, get_current_directory]
-    react_agent = create_react_agent(llm, coder_tools)
+    content = response.content
 
-    react_agent.invoke({"messages": [{"role": "system", "content": system_prompt},
-                                     {"role": "user", "content": user_prompt}]})
+    # Direct write
+    write_file.run(current_task.filepath, content)
 
     coder_state.current_step_idx += 1
-    return {"coder_state": coder_state}
 
+    return {"coder_state": coder_state}
 
 graph = StateGraph(dict)
 
