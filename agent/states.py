@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, validator
 
 
 class File(BaseModel):
@@ -19,8 +19,14 @@ class ImplementationTask(BaseModel):
     task_description: str = Field(description="A detailed description of the task to be performed on the file, e.g. 'add user authentication', 'implement data processing logic', etc.")
 
 class TaskPlan(BaseModel):
-    implementation_steps: list[ImplementationTask] = Field(description="A list of steps to be taken to implement the task")
+    implementation_steps: list[ImplementationTask] = Field(
+        description="A list of steps to implement the task. Maximum 15 steps."
+    )
     model_config = ConfigDict(extra="allow")
+
+    @validator("implementation_steps")
+    def limit_steps(cls, v):
+        return v[:15] 
     
 class CoderState(BaseModel):
     task_plan: TaskPlan = Field(description="The plan for the task to be implemented")

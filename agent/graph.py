@@ -12,7 +12,7 @@ _ = load_dotenv()
 
 
 
-llm = ChatGroq(model="openai/gpt-oss-120b")
+llm = ChatGroq(model="openai/gpt-oss-120b", max_tokens=4096)
 
 
 def planner_agent(state: dict) -> dict:
@@ -27,18 +27,21 @@ def planner_agent(state: dict) -> dict:
 
 
 def architect_agent(state: dict) -> dict:
-    """Creates TaskPlan from Plan."""
     plan: Plan = state["plan"]
-    resp = llm.with_structured_output(TaskPlan).invoke(
-        architect_prompt(plan=plan.model_dump_json())
-    )
+    try:
+        resp = llm.with_structured_output(TaskPlan).invoke(
+            architect_prompt(plan=plan.model_dump_json())
+        )
+    except Exception:
+        # Fallback: ask for fewer steps
+        resp = llm.with_structured_output(TaskPlan).invoke(
+            architect_prompt(plan=plan.model_dump_json()) +
+            "\n\nIMPORTANT: Return MAXIMUM 8 steps. Be very brief."
+        )
     if resp is None:
-        raise ValueError("Planner did not return a valid response.")
-
+        raise ValueError("Architect did not return a valid response.")
     resp.plan = plan
-    print(resp.model_dump_json())
     return {"task_plan": resp}
-
 
 def coder_agent(state: dict) -> dict:
     coder_state: CoderState = state.get("coder_state")
