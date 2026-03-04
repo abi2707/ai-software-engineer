@@ -114,7 +114,7 @@ focus: border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.2);
 GENERAL IMPLEMENTATION RULES:
 
 1. UNDERSTAND the app type and implement ALL expected features:
-   - Games: full game loop, score, controls, game over, restart,start button
+   - Games: full game loop, score, controls, game over, restart
    - Tools/calculators: all operations, keyboard support, error handling
    - Data apps: add/edit/delete, search, filter, sort
    - Planners/trackers: CRUD, totals/stats, localStorage persistence
