@@ -1,18 +1,22 @@
+import os
+import re
+import shutil
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import os
-import zipfile
+from agent.graph import agent
 
-app = FastAPI()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_FOLDER = os.path.join(BASE_DIR, "generated_project")
 
-# Serve generated project as real static site
-app.mount(
-    "/generated",
-    StaticFiles(directory="generated_project"),
-    name="generated"
-)
+# Create the folder before FastAPI tries to mount it
+os.makedirs(PROJECT_FOLDER, exist_ok=True)
+
+app = FastAPI(title="AI Software Engineer", version="1.0")
+
+# Now safe to mount since folder is guaranteed to exist
+app.mount("/static", StaticFiles(directory=PROJECT_FOLDER), name="static")
 
 class ChatRequest(BaseModel):
     user_prompt: str
@@ -20,81 +24,71 @@ class ChatRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
+    with open(os.path.join(BASE_DIR, "templates", "index.html"), "r") as f:
         return f.read()
 
 
+@app.get("/debug")
+def debug():
+    return {
+        "BASE_DIR": BASE_DIR,
+        "project_folder_exists": os.path.exists(PROJECT_FOLDER),
+        "files": os.listdir(PROJECT_FOLDER) if os.path.exists(PROJECT_FOLDER) else []
+    }
+
+
+def inline_assets(html: str, project_folder: str) -> str:
+    def replace_css(match):
+        path = os.path.join(project_folder, match.group(1))
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f"<style>{f.read()}</style>"
+        return match.group(0)
+
+    def replace_js(match):
+        path = os.path.join(project_folder, match.group(1))
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                js = f.read()
+            return f"<script>document.addEventListener('DOMContentLoaded',function(){{{js}}});</script>"
+        return match.group(0)
+
+    html = re.sub(r'<link[^>]+href=["\']([^"\']+\.css)["\'][^>]*>',
+                  replace_css, html, flags=re.IGNORECASE)
+    html = re.sub(r'<script[^>]*src=["\']([^"\'#][^"\']*\.js)["\'][^>]*>\s*</script>',
+                  replace_js, html, flags=re.IGNORECASE)
+    return html
+
+
 @app.post("/chat")
-def chat(req: ChatRequest):
+async def chat(request: ChatRequest):
+    try:
+        agent.invoke({"user_prompt": request.user_prompt}, {"recursion_limit": 100})
+    except Exception as e:
+        return {"message": f"Agent error: {str(e)}", "preview_html": None, "download_url": None}
 
-    os.makedirs("generated_project", exist_ok=True)
+    zip_base = os.path.join(BASE_DIR, "generated_project")
+    if os.path.exists(zip_base + ".zip"):
+        os.remove(zip_base + ".zip")
+    shutil.make_archive(zip_base, "zip", PROJECT_FOLDER)
 
-    # === SAMPLE GENERATED PROJECT ===
-    # (Replace this later with your agent output)
+    preview_html = None
+    preview_path = os.path.join(PROJECT_FOLDER, "index.html")
+    if os.path.exists(preview_path):
+        with open(preview_path, "r", encoding="utf-8") as f:
+            preview_html = inline_assets(f.read(), PROJECT_FOLDER)
 
-    html_content = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Generated App</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
-    <body>
-        <h1>Hello from Buildy 🚀</h1>
-        <button onclick="hello()">Click Me</button>
-        <script src="script.js"></script>
-    </body>
-    </html>
-    """
-
-    css_content = """
-    body {
-        font-family: Arial;
-        text-align: center;
-        margin-top: 100px;
-        background: #f4f4f4;
-    }
-    button {
-        padding: 10px 20px;
-        font-size: 16px;
-    }
-    """
-
-    js_content = """
-    function hello() {
-        alert("Preview is fully functional!");
-    }
-    """
-
-    with open("generated_project/index.html", "w", encoding="utf-8") as f:
-        f.write(html_content)
-
-    with open("generated_project/style.css", "w", encoding="utf-8") as f:
-        f.write(css_content)
-
-    with open("generated_project/script.js", "w", encoding="utf-8") as f:
-        f.write(js_content)
-
-    # Create ZIP
-    zip_path = "generated_project.zip"
-    with zipfile.ZipFile(zip_path, "w") as zipf:
-        for root, dirs, files in os.walk("generated_project"):
-            for file in files:
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, "generated_project")
-                zipf.write(full_path, rel_path)
-
-    return JSONResponse({
+    return {
         "message": "Project generated successfully",
-        "preview_html": None,  # IMPORTANT: we don't use srcdoc anymore
+        "preview_html": preview_html,
         "download_url": "/download"
-    })
+    }
 
 
 @app.get("/download")
-def download():
+def download_project():
     return FileResponse(
-        "generated_project.zip",
+        os.path.join(BASE_DIR, "generated_project.zip"),
         media_type="application/zip",
-        filename="project.zip"
+        filename="generated_project.zip"
     )
