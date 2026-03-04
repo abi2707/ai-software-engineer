@@ -1,34 +1,37 @@
 from typing import Optional
-
 from pydantic import BaseModel, Field, ConfigDict, validator
 
 
 class File(BaseModel):
-    path: str = Field(description="The path to the file to be created or modified")
-    purpose: str = Field(description="The purpose of the file, e.g. 'main application logic', 'data processing module', etc.")
-    
+    path: str = Field(description="The path to the file to be created")
+    purpose: str = Field(description="The purpose of the file")
+
+
 class Plan(BaseModel):
-    name: str = Field(description="The name of app to be built")
-    description: str = Field(description="A oneline description of the app to be built, e.g. 'A web application for managing personal finances'")
-    techstack: str = Field(description="The tech stack to be used for the app, e.g. 'python', 'javascript', 'react', 'flask', etc.")
-    features: list[str] = Field(description="A list of features that the app should have, e.g. 'user authentication', 'data visualization', etc.")
-    files: list[File] = Field(description="A list of files to be created, each with a 'path' and 'purpose'")
+    name: str = Field(description="The name of the app to be built")
+    description: str = Field(description="A one-line description of the app")
+    techstack: str = Field(description="Always: plain HTML, CSS, JS")
+    features: list[str] = Field(description="List of features")
+    files: list[File] = Field(description="List of files — max 3: index.html, style.css, script.js")
+
 
 class ImplementationTask(BaseModel):
-    filepath: str = Field(description="The path to the file to be modified")
-    task_description: str = Field(description="A detailed description of the task to be performed on the file, e.g. 'add user authentication', 'implement data processing logic', etc.")
+    filepath: str = Field(description="Path to the file — must be index.html, style.css, or script.js")
+    task_description: str = Field(description="Concise task description under 100 words")
+
 
 class TaskPlan(BaseModel):
     implementation_steps: list[ImplementationTask] = Field(
-        description="A list of steps to implement the task. Maximum 15 steps."
+        description="Ordered implementation steps. Maximum 3."
     )
     model_config = ConfigDict(extra="allow")
 
     @validator("implementation_steps")
     def limit_steps(cls, v):
-        return v[:15] 
-    
+        return v[:3]
+
+
 class CoderState(BaseModel):
-    task_plan: TaskPlan = Field(description="The plan for the task to be implemented")
-    current_step_idx: int = Field(0, description="The index of the current step in the implementation steps")
-    current_file_content: Optional[str] = Field(None, description="The content of the file currently being edited or created")
+    task_plan: TaskPlan = Field(description="The plan to implement")
+    current_step_idx: int = Field(0, description="Current step index")
+    current_file_content: Optional[str] = Field(None, description="Current file content")

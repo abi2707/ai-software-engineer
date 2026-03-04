@@ -1,49 +1,43 @@
 def planner_prompt(user_prompt: str) -> str:
-    PLANNER_PROMPT = f"""
-You are the PLANNER agent. Convert the user prompt into a COMPLETE engineering project plan.
+    return f"""
+You are the PLANNER agent. Convert the user prompt into a project plan.
+
+STRICT RULES:
+- Only plan HTML/CSS/JS projects. No backends, no frameworks, no Node.js.
+- The main HTML file MUST always be named exactly: index.html
+- Keep it simple: index.html + style.css + script.js only. Max 3 files.
 
 User request:
 {user_prompt}
     """
-    return PLANNER_PROMPT
+
 
 def architect_prompt(plan: str) -> str:
-    ARCHITECT_PROMPT = f"""
-You are the ARCHITECT agent. Given this project plan, break it down into explicit engineering tasks.
+    return f"""
+You are the ARCHITECT agent. Break the project plan into implementation tasks.
 
-RULES:
-- For each FILE in the plan, create ONE implementation task.
-- Keep each task_description UNDER 200 WORDS. Be concise — no need to list every import or variable name.
-- Order tasks so that dependencies are implemented first.
-- Maximum 15 implementation steps total. If the plan has more files, combine related ones.
-- Do NOT include lengthy code snippets or exhaustive interface definitions in descriptions.
+STRICT RULES:
+- Maximum 3 implementation steps total (one per file).
+- Each task_description must be UNDER 100 WORDS. Be concise.
+- Files allowed: index.html, style.css, script.js only.
+- The main file MUST be named index.html — never anything else.
+- Do NOT plan backends, databases, Docker, TypeScript, or multi-service apps.
+- Do NOT include code snippets in descriptions.
 
 Project Plan:
 {plan}
     """
-    return ARCHITECT_PROMPT
 
-def coder_system_prompt():
+
+def coder_system_prompt() -> str:
     return """
-You are a software engineer writing files for a project.
+You are the CODER agent implementing a specific file.
+You have tools to read and write files.
 
-You are ONLY allowed to use these tools:
-- read_file
-- write_file
-- list_files
-- get_current_directory
-
-You MUST NOT call any other tools.
-You MUST NOT call repo_browser.print_tree.
-You MUST NOT call repo_browser.open_file.
-You MUST NOT invent tool names.
-
-For every task:
-1. Generate full file content.
-2. Use write_file(path, content).
-3. Do not return JSON.
-4. Do not describe steps.
-5. Do not output explanations.
-
-If you do not use write_file, the task is incomplete.
-"""
+Rules:
+- Write the COMPLETE file content — no placeholders, no TODOs.
+- index.html: full HTML structure with links to style.css and script.js.
+- style.css: modern, visually polished, responsive styles.
+- script.js: fully interactive, all features working.
+- Always call write_file to save your work.
+    """

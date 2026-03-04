@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import pathlib
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,12 +11,10 @@ from agent.graph import agent
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_FOLDER = os.path.join(BASE_DIR, "generated_project")
 
-# Create the folder before FastAPI tries to mount it
 os.makedirs(PROJECT_FOLDER, exist_ok=True)
 
 app = FastAPI(title="AI Software Engineer", version="1.0")
 
-# Now safe to mount since folder is guaranteed to exist
 app.mount("/static", StaticFiles(directory=PROJECT_FOLDER), name="static")
 
 class ChatRequest(BaseModel):
@@ -32,6 +31,7 @@ def home():
 def debug():
     return {
         "BASE_DIR": BASE_DIR,
+        "cwd": os.getcwd(),
         "project_folder_exists": os.path.exists(PROJECT_FOLDER),
         "files": os.listdir(PROJECT_FOLDER) if os.path.exists(PROJECT_FOLDER) else []
     }
@@ -72,8 +72,14 @@ async def chat(request: ChatRequest):
         os.remove(zip_base + ".zip")
     shutil.make_archive(zip_base, "zip", PROJECT_FOLDER)
 
-    preview_html = None
+    # Try index.html first, then fall back to any .html file
     preview_path = os.path.join(PROJECT_FOLDER, "index.html")
+    if not os.path.exists(preview_path):
+        html_files = list(pathlib.Path(PROJECT_FOLDER).glob("**/*.html"))
+        if html_files:
+            preview_path = str(html_files[0])
+
+    preview_html = None
     if os.path.exists(preview_path):
         with open(preview_path, "r", encoding="utf-8") as f:
             preview_html = inline_assets(f.read(), PROJECT_FOLDER)
