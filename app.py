@@ -49,19 +49,32 @@ def inline_assets(html: str, project_folder: str) -> str:
         path = os.path.join(project_folder, match.group(1))
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                js = f.read()
-            return f"<script>document.addEventListener('DOMContentLoaded',function(){{{js}}});</script>"
+                return f"<script>{f.read()}</script>"
         return match.group(0)
 
+    # Inline CSS
     html = re.sub(r'<link[^>]+href=["\']([^"\']+\.css)["\'][^>]*>',
                   replace_css, html, flags=re.IGNORECASE)
+
+    # Inline JS — handles defer, async, type attributes
     html = re.sub(r'<script[^>]*src=["\']([^"\'#][^"\']*\.js)["\'][^>]*>\s*</script>',
                   replace_js, html, flags=re.IGNORECASE)
+
+    # Move all <script> blocks to just before </body> so DOM is always ready
+    scripts = re.findall(r'<script[\s\S]*?</script>', html)
+    html = re.sub(r'<script[\s\S]*?</script>', '', html)
+    html = html.replace('</body>', '\n'.join(scripts) + '\n</body>')
+
     return html
 
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    # Clear previous project before generating new one
+    if os.path.exists(PROJECT_FOLDER):
+        shutil.rmtree(PROJECT_FOLDER)
+    os.makedirs(PROJECT_FOLDER, exist_ok=True)
+
     try:
         agent.invoke({"user_prompt": request.user_prompt}, {"recursion_limit": 100})
     except Exception as e:

@@ -10,10 +10,7 @@ from agent.tools import write_file, read_file, get_current_directory, list_files
 
 _ = load_dotenv()
 
-# Main LLM for planning and structured output
 llm = ChatGroq(model="llama-3.3-70b-versatile", max_tokens=4096)
-
-# Separate LLM for coder agent — smaller, faster, better at tool calls
 coder_llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", max_tokens=4096)
 
 
@@ -58,7 +55,8 @@ def coder_agent(state: dict) -> dict:
         f"Task: {current_task.task_description}\n"
         f"File to create: {current_task.filepath}\n"
         f"Existing content:\n{existing_content}\n\n"
-        f"Write the complete file content and save it using write_file(path='{current_task.filepath}', content=<your code>)."
+        f"Write the complete file content and save it using "
+        f"write_file(path='{current_task.filepath}', content=<your code>)."
     )
 
     coder_tools = [read_file, write_file, list_files, get_current_directory]
