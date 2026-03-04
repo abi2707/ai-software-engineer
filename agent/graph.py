@@ -10,8 +10,7 @@ from agent.tools import write_file, read_file, get_current_directory, list_files
 
 _ = load_dotenv()
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", max_tokens=4096)
-coder_llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", max_tokens=8192)
+llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", max_tokens=8192)
 
 
 def planner_agent(state: dict) -> dict:
@@ -60,7 +59,7 @@ def coder_agent(state: dict) -> dict:
     )
 
     coder_tools = [read_file, write_file, list_files, get_current_directory]
-    react_agent = create_react_agent(coder_llm, coder_tools)
+    react_agent = create_react_agent(llm, coder_tools)
 
     try:
         react_agent.invoke({
