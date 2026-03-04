@@ -51,11 +51,14 @@ def coder_agent(state: dict) -> dict:
     existing_content = read_file.run(current_task.filepath)
 
     user_prompt = (
-        f"Task: {current_task.task_description}\n"
-        f"File to create: {current_task.filepath}\n"
-        f"Existing content:\n{existing_content}\n\n"
-        f"Write the complete file content and save it using "
-        f"write_file(path='{current_task.filepath}', content=<your code>)."
+        f"Write the complete content for '{current_task.filepath}'.\n\n"
+        f"Task: {current_task.task_description}\n\n"
+        f"IMPORTANT: You MUST call the write_file tool with:\n"
+        f"  path = '{current_task.filepath}'\n"
+        f"  content = the complete file content\n\n"
+        f"Do NOT describe the code. Do NOT explain anything. "
+        f"Just call write_file immediately with the full code as the content argument. "
+        f"The content must be the raw file content only — no markdown, no backticks, no explanation."
     )
 
     coder_tools = [read_file, write_file, list_files, get_current_directory]
@@ -73,7 +76,6 @@ def coder_agent(state: dict) -> dict:
 
     coder_state.current_step_idx += 1
     return {"coder_state": coder_state}
-
 
 graph = StateGraph(dict)
 graph.add_node("planner",   planner_agent)
