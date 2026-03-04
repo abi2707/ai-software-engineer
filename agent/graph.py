@@ -10,7 +10,7 @@ from agent.tools import write_file, read_file, get_current_directory, list_files
 
 _ = load_dotenv()
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", max_tokens=4096)
+llm = ChatGroq(model="llama3-groq-70b-8192-tool-use-preview", max_tokens=4096)
 
 
 def planner_agent(state: dict) -> dict:
@@ -59,12 +59,16 @@ def coder_agent(state: dict) -> dict:
 
     coder_tools = [read_file, write_file, list_files, get_current_directory]
     react_agent = create_react_agent(llm, coder_tools)
-    react_agent.invoke({
-        "messages": [
-            {"role": "system", "content": coder_system_prompt()},
-            {"role": "user",   "content": user_prompt}
-        ]
-    })
+
+    try:
+        react_agent.invoke({
+            "messages": [
+                {"role": "system", "content": coder_system_prompt()},
+                {"role": "user",   "content": user_prompt}
+            ]
+        })
+    except Exception as e:
+        print(f"Coder step {coder_state.current_step_idx} failed: {e}")
 
     coder_state.current_step_idx += 1
     return {"coder_state": coder_state}
