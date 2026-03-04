@@ -10,32 +10,59 @@ from agent.tools import write_file, read_file, get_current_directory, list_files
 
 _ = load_dotenv()
 
-llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", max_tokens=8192)
+# Model pool — tries each in order if one hits rate limit
+MODEL_POOL = [
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "llama-3.3-70b-versatile",
+    "llama3-70b-8192",
+]
+
+def get_llm(model: str) -> ChatGroq:
+    return ChatGroq(model=model, max_tokens=8192)
+
+def invoke_with_fallback(fn, *args, **kwargs):
+    """Try each model in the pool until one works."""
+    last_error = None
+    for model in MODEL_POOL:
+        try:
+            llm = get_llm(model)
+            return fn(llm, *args, **kwargs)
+        except Exception as e:
+            if "rate_limit" in str(e) or "429" in str(e) or "decommissioned" in str(e):
+                print(f"Model {model} failed: {e}. Trying next...")
+                last_error = e
+                continue
+            raise e
+    raise last_error
 
 
 def planner_agent(state: dict) -> dict:
-    user_prompt = state["user_prompt"]
-    resp = llm.with_structured_output(Plan).invoke(planner_prompt(user_prompt))
-    if resp is None:
-        raise ValueError("Planner did not return a valid response.")
-    return {"plan": resp}
+    def run(llm):
+        resp = llm.with_structured_output(Plan).invoke(planner_prompt(state["user_prompt"]))
+        if resp is None:
+            raise ValueError("Planner returned None.")
+        return {"plan": resp}
+    return invoke_with_fallback(run)
 
 
 def architect_agent(state: dict) -> dict:
     plan: Plan = state["plan"]
-    try:
-        resp = llm.with_structured_output(TaskPlan).invoke(
-            architect_prompt(plan=plan.model_dump_json())
-        )
-    except Exception:
-        resp = llm.with_structured_output(TaskPlan).invoke(
-            architect_prompt(plan=plan.model_dump_json()) +
-            "\n\nIMPORTANT: Return MAXIMUM 3 steps only."
-        )
-    if resp is None:
-        raise ValueError("Architect did not return a valid response.")
-    resp.plan = plan
-    return {"task_plan": resp}
+    def run(llm):
+        try:
+            resp = llm.with_structured_output(TaskPlan).invoke(
+                architect_prompt(plan=plan.model_dump_json())
+            )
+        except Exception:
+            resp = llm.with_structured_output(TaskPlan).invoke(
+                architect_prompt(plan=plan.model_dump_json()) +
+                "\n\nIMPORTANT: Return MAXIMUM 3 steps only."
+            )
+        if resp is None:
+            raise ValueError("Architect returned None.")
+        resp.plan = plan
+        return {"task_plan": resp}
+    return invoke_with_fallback(run)
 
 
 def coder_agent(state: dict) -> dict:
@@ -61,21 +88,24 @@ def coder_agent(state: dict) -> dict:
         f"The content must be the raw file content only — no markdown, no backticks, no explanation."
     )
 
-    coder_tools = [read_file, write_file, list_files, get_current_directory]
-    react_agent = create_react_agent(llm, coder_tools)
-
-    try:
+    def run(llm):
+        coder_tools = [read_file, write_file, list_files, get_current_directory]
+        react_agent = create_react_agent(llm, coder_tools)
         react_agent.invoke({
             "messages": [
                 {"role": "system", "content": coder_system_prompt()},
                 {"role": "user",   "content": user_prompt}
             ]
         })
+
+    try:
+        invoke_with_fallback(run)
     except Exception as e:
-        print(f"Coder step {coder_state.current_step_idx} failed: {e}")
+        print(f"Coder step {coder_state.current_step_idx} failed on all models: {e}")
 
     coder_state.current_step_idx += 1
     return {"coder_state": coder_state}
+
 
 graph = StateGraph(dict)
 graph.add_node("planner",   planner_agent)
