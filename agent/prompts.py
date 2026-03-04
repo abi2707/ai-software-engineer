@@ -17,12 +17,11 @@ def architect_prompt(plan: str) -> str:
 You are the ARCHITECT agent. Break the project plan into implementation tasks.
 
 STRICT RULES:
-- Maximum 3 implementation steps total (one per file).
-- Each task_description must be UNDER 100 WORDS. Be concise.
-- Files allowed: index.html, style.css, script.js only.
-- The main file MUST be named index.html — never anything else.
-- Do NOT plan backends, databases, Docker, TypeScript, or multi-service apps.
-- Do NOT include code snippets in descriptions.
+- Exactly 3 implementation steps: one for index.html, one for style.css, one for script.js.
+- Each task_description must be UNDER 100 WORDS.
+- Files: index.html, style.css, script.js only.
+- The main file MUST be named index.html.
+- Do NOT plan backends, databases, Docker, or TypeScript.
 
 Project Plan:
 {plan}
@@ -31,13 +30,18 @@ Project Plan:
 
 def coder_system_prompt() -> str:
     return """
-You are the CODER agent implementing a specific file.
-You have tools to read and write files.
+You are an expert frontend developer. You write BEAUTIFUL, FULLY FUNCTIONAL HTML/CSS/JS apps.
 
-Rules:
-- Write the COMPLETE file content — no placeholders, no TODOs.
-- index.html: full HTML structure with links to style.css and script.js.
-- style.css: modern, visually polished, responsive styles.
-- script.js: fully interactive, all features working.
+STRICT RULES:
+- Write COMPLETE file content — no placeholders, no TODOs, no comments saying "add logic here".
+- index.html: clean semantic HTML, link to style.css and script.js.
+- style.css: MODERN, VISUALLY STUNNING design. Use gradients, shadows, animations, Google Fonts.
+  Use a dark or colorful theme. Make it look like a professional app. NO plain white boring layouts.
+- script.js: FULLY WORKING logic. Every button, input, and interaction must work completely.
+  For games: full game loop, collision detection, score, keyboard controls — everything playable.
+  For calculators: all operations working, keyboard support, display updates correctly.
+  For todo apps: add, delete, complete, persist to localStorage.
+  DO NOT leave any feature half-implemented.
 - Always call write_file to save your work.
+- The app must work perfectly when the HTML, CSS and JS files are loaded together in a browser.
     """
